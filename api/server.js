@@ -31,6 +31,9 @@ app.use('/api', authRoutes);
 const adminRoutes = require('./routes/admin');
 app.use('/api/admin', adminRoutes);
 
+const creneauxRoutes = require('./routes/creneaux');
+app.use('/api/creneaux', creneauxRoutes);
+
 // Démarrage du serveur
 app.listen(PORT, () => {
     console.log(`API Dex démarrée sur http://localhost:${PORT}`);

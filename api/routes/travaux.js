@@ -1,6 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
+const verifierJeton = require('../middleware/auth');
 
 const db = require('../db');
 
@@ -257,5 +258,156 @@ router.put('/:id/disponibilites/:matricule', async (req, res) => {
     }
 });
 
+
+// MODIFIER UN TRAVAIL
+router.put('/:id', verifierJeton, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            titre,
+            description,
+            type,
+            disponible,
+            remise,
+            ouvert
+        } = req.body;
+
+        // Vérifier que tous les champs sont présents
+        if (
+            !titre ||
+            !description ||
+            !type ||
+            !disponible ||
+            !remise ||
+            typeof ouvert !== 'boolean'
+        ) {
+            return res.status(400).json({
+                erreurs: ['Tous les champs sont requis.']
+            });
+        }
+
+        // Vérifier que le travail existe et appartient au professeur
+        const [resultats] = await db.execute(
+            `SELECT t.id
+             FROM travaux t
+             INNER JOIN cours c ON t.cours_id = c.id
+             WHERE t.id = ? AND c.utilisateur_id = ?`,
+            [id, req.utilisateur.id]
+        );
+
+        if (resultats.length === 0) {
+            // Vérifier si le travail existe
+            const [travaux] = await db.execute(
+                'SELECT id FROM travaux WHERE id = ?',
+                [id]
+            );
+
+            if (travaux.length === 0) {
+                return res.status(404).json({
+                    erreurs: ['Travail introuvable.']
+                });
+            }
+
+            return res.status(403).json({
+                erreurs: ['Vous ne pouvez pas modifier ce travail.']
+            });
+        }
+
+        // Modifier le travail
+        await db.execute(
+            `UPDATE travaux
+             SET titre = ?,
+                 description = ?,
+                 type = ?,
+                 disponible = ?,
+                 remise = ?,
+                 ouvert = ?
+             WHERE id = ?`,
+            [
+                titre,
+                description,
+                type,
+                disponible,
+                remise,
+                ouvert,
+                id
+            ]
+        );
+
+        return res.status(200).json({
+            message: 'Travail modifié avec succès.'
+        });
+
+    } catch (erreur) {
+        console.error(erreur);
+
+        return res.status(500).json({
+            erreurs: ['Une erreur est survenue sur le serveur.']
+        });
+    }
+});
+
+
+ // AJOUTER UN CRÉNEAU
+router.post('/:id/creneaux', verifierJeton, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { debut, fin } = req.body;
+
+        if (!debut || !fin || new Date(fin) <= new Date(debut)) {
+            return res.status(400).json({
+                erreurs: ['Les dates du créneau sont invalides.']
+            });
+        }
+
+        // Vérifier que le travail existe et appartient au professeur
+        const [resultats] = await db.execute(
+            `SELECT t.id
+             FROM travaux t
+             INNER JOIN cours c ON t.cours_id = c.id
+             WHERE t.id = ? AND c.utilisateur_id = ?`,
+            [id, req.utilisateur.id]
+        );
+
+        if (resultats.length === 0) {
+            const [travaux] = await db.execute(
+                'SELECT id FROM travaux WHERE id = ?',
+                [id]
+            );
+
+            if (travaux.length === 0) {
+                return res.status(404).json({
+                    erreurs: ['Travail introuvable.']
+                });
+            }
+
+            return res.status(403).json({
+                erreurs: ['Vous ne pouvez pas modifier ce travail.']
+            });
+        }
+
+        // Générer un identifiant unique pour le créneau
+        const crypto = require('crypto');
+        const creneauId = crypto.randomUUID();
+
+        await db.execute(
+            `INSERT INTO creneaux (id, travail_id, debut, fin)
+             VALUES (?, ?, ?, ?)`,
+            [creneauId, id, debut, fin]
+        );
+
+        return res.status(201).json({
+            message: 'Créneau ajouté avec succès.',
+            id: creneauId
+        });
+
+    } catch (erreur) {
+        console.error(erreur);
+
+        return res.status(500).json({
+            erreurs: ['Une erreur est survenue sur le serveur.']
+        });
+    }
+});
 
 module.exports = router;
