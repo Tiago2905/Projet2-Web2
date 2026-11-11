@@ -20,8 +20,10 @@ app.get('/api', (req, res) => {
 });
 
 const coursRoutes = require('./routes/cours');
-
 app.use('/api/cours', coursRoutes);
+
+const travauxRoutes = require('./routes/travaux');
+app.use('/api/travaux', travauxRoutes);
 
 // Démarrage du serveur
 app.listen(PORT, () => {
