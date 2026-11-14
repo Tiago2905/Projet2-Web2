@@ -63,6 +63,57 @@ router.put('/:id', verifierJeton, async (req, res) => {
     }
 });
 
+// COMPTER LES RÉPONSES AVANT LA SUPPRESSION D'UN CRÉNEAU
+router.get('/:id/suppression-info', verifierJeton, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [resultats] = await db.execute(
+            `SELECT cr.id
+             FROM creneaux cr
+             INNER JOIN travaux t ON cr.travail_id = t.id
+             INNER JOIN cours c ON t.cours_id = c.id
+             WHERE cr.id = ? AND c.utilisateur_id = ?`,
+            [id, req.utilisateur.id]
+        );
+
+        if (resultats.length === 0) {
+            const [creneaux] = await db.execute(
+                'SELECT id FROM creneaux WHERE id = ?',
+                [id]
+            );
+
+            if (creneaux.length === 0) {
+                return res.status(404).json({
+                    erreurs: ['Créneau introuvable.']
+                });
+            }
+
+            return res.status(403).json({
+                erreurs: ['Vous ne pouvez pas accéder à ce créneau.']
+            });
+        }
+
+        const [reponses] = await db.execute(
+            `SELECT COUNT(*) AS nombre
+             FROM disponibilites
+             WHERE creneau_id = ?`,
+            [id]
+        );
+
+        return res.status(200).json({
+            nombreReponses: reponses[0].nombre
+        });
+
+    } catch (erreur) {
+        console.error(erreur);
+
+        return res.status(500).json({
+            erreurs: ['Une erreur est survenue sur le serveur.']
+        });
+    }
+});
+
 // SUPPRIMER UN CRÉNEAU
 router.delete('/:id', verifierJeton, async (req, res) => {
     try {

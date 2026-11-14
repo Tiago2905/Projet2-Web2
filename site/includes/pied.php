@@ -2,7 +2,7 @@
 </main>
 
 <footer>
-    <p>&copy; <?= date('Y') ?> DexApp - Tous droits réservés.</p>
+    <p>&copy; <?= date('Y') ?> DexApp - Tiago Placido Machado.</p>
 </footer>
 
 </body>

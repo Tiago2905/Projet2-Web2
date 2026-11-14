@@ -8,7 +8,7 @@ const db = require('../db');
 // GET : récupérer les travaux ouverts
 router.get('/', async (req, res) => {
     try {
-        const { cours_id } = req.query;
+        const { cours } = req.query;
 
         let sql = `
             SELECT id, cours_id, titre, description,
@@ -19,10 +19,10 @@ router.get('/', async (req, res) => {
 
         const parametres = [];
 
-        // Filtrer par cours si un cours_id est fourni
-        if (cours_id) {
+        // Filtrer par cours si un cours est fourni
+        if (cours) {
             sql += ' AND cours_id = ?';
-            parametres.push(cours_id);
+            parametres.push(cours);
         }
 
         sql += ' ORDER BY remise ASC';
